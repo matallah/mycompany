@@ -39,6 +39,11 @@ DESIGN receipt {
     }
 }
 
+EXTEND FORM receipts
+    EXTEND FILTERGROUP status
+        FILTER 'Put away' status(r) = ReceiptStatus.putAway
+;
+
 // put away process
 CLASS ReceiptPutAway 'Put away';
 
@@ -104,7 +109,7 @@ DESIGN receipt {
         NEW receiptPutAway {
             caption = 'Put away';
             showIf = toPutAway(r);
-            MOVE USERFILTER(p);
+            MOVE FILTERS(p);
             MOVE GRID(p);
             MOVE TOOLBARBOX(p);
         }

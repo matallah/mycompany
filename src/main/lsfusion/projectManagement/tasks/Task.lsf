@@ -1,6 +1,8 @@
 MODULE Task;
 
-REQUIRE ProjectManagementSettings, Employee, TaskStatus, Doc;
+REQUIRE ProjectManagementSettings, Employee,
+        Doc, FileUtils,
+        TaskStatus, TaskPriority, TaskTag;
 
 PRIORITY MasterData;
 
@@ -24,12 +26,21 @@ description 'Description' = DATA RICHTEXT (Task) CHARWIDTH 20;
 status 'Status' = DATA TaskStatus (Task);
 nameStatus 'Status' (Task t) = name(status(t));
 
+priority 'Priority' = DATA TaskPriority (Task);
+namePriority 'Priority' (Task t) = name(priority(t));
+idColorPriority (Task t) = idColor(priority(t));
+
+in 'Incl.' = DATA BOOLEAN (Task, TaskTag);
+tags 'Tags' (Task t) = GROUP CONCAT name(TaskTag tg) IF in(t, tg), ', ' ORDER name(tg), tg;
+
 archived 'Archived' = DATA BOOLEAN (Task) CHARWIDTH 10;
 active '{Active}' (Task i) = NOT archived(i) CHARWIDTH 10;
 
 FORM task 'Task'
     OBJECTS t = Task PANEL
-    PROPERTIES(t) name, nameAuthor, nameAssignedTo, nameStatus, deadline, description, archived
+    PROPERTIES(t) name, nameAuthor, nameAssignedTo, 
+                  nameStatus, namePriority, tags, 
+                  deadline, description, archived
 
     EDIT Task OBJECT t
 ;
@@ -44,15 +55,17 @@ DESIGN task {
                 MOVE PROPERTY(archived(t)) { alignment = STRETCH; }
             }
             NEW params {
-                columns = 2;
+                lines = 2;
                 alignment = STRETCH;
                 MOVE PROPERTY(nameAuthor(t));
                 MOVE PROPERTY(nameAssignedTo(t));
                 MOVE PROPERTY(nameStatus(t));
+                MOVE PROPERTY(namePriority(t));
+                MOVE PROPERTY(tags(t));
                 MOVE PROPERTY(deadline(t));
             }
         }
-        NEW tabbedPane {
+        NEW details {
             tabbed = TRUE;
             fill = 1;
             NEW description {
@@ -66,17 +79,23 @@ DESIGN task {
 
 FORM tasks '{Tasks}'
     OBJECTS t = Task
-    PROPERTIES(t) READONLY name, nameAuthor, nameAssignedTo, nameStatus, deadline, archived
+    PROPERTIES(t) READONLY name, nameAuthor, nameAssignedTo, nameStatus, namePriority, tags, deadline, archived
     PROPERTIES(t) NEWSESSION NEW, EDIT, DELETE
 
     FILTERGROUP active
         FILTER '{Active}' active(t) 'F8' DEFAULT
         FILTER 'Archived' archived(t) 'F7'
 
+    FILTERGROUP my
+        FILTER 'My tasks' author(t) = currentUser() 'F6'
+        FILTER 'Assigned to me' assignedTo(t) = currentUser() 'F5'
+    
     LIST Task OBJECT t
 ;
 
-@defineDocObjectsForm(tasks, t, 'Tasks');
+@defineDocObjectsForm(tasks, t, '{Tasks}');
+
+@defineObjectFiles(task, t, 'Task file');
 
 NAVIGATOR {
     operations {
